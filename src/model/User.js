@@ -2,6 +2,8 @@ const mongoose = require('mongoose')
 const validator = require('validator')
 const bcrypt = require('bcrypt')
 const jwt = require('jsonwebtoken')
+const Task = require('./Task')
+    //  = require('../routers/user')
 
 const user_schema = new mongoose.Schema({
     name: {
@@ -47,15 +49,31 @@ const user_schema = new mongoose.Schema({
             required: true
         }
     }]
+}, {
+    timestamps: true
+})
+
+user_schema.virtual('tasks', {
+    ref: 'Task',
+    localField: '_id',
+    foreignField: 'owner'
 })
 
 //authontication token
 user_schema.methods.createToken = async function() {
+        const user = this
+        const token = jwt.sign({ _id: user._id.toString() }, 'xx')
+        user.tokens = user.tokens.concat({ token })
+        await user.save()
+        return token
+    }
+    // to hide data
+user_schema.methods.toJSON = function() {
     const user = this
-    const token = jwt.sign({ _id: user._id.toString() }, 'xx')
-    user.tokens = user.tokens.concat({ token })
-    await user.save()
-    return token
+    const userObject = user.toObject()
+    delete userObject.password
+    delete userObject.tokens
+    return userObject
 }
 
 
@@ -85,6 +103,11 @@ user_schema.pre('save', async function(next) {
     next()
 })
 
+user_schema.pre('remove', async function(next) {
+    const user = this
+    await Task.deleteMany({ owner: user._id })
+    next()
+})
 const User = mongoose.model('User', user_schema)
 
 module.exports = User
