@@ -5,13 +5,13 @@ const auth = require('../middleware/auth')
 const multer = require('multer')
 const sharo = require('sharp')
 const sharp = require('sharp')
-    // const { welcomemail } = require('../emails/account')
+const { welcomemail } = require('../emails/account')
 router.post('/users', async(req, res) => {
     const user = new User(req.body)
     try {
         await user.save()
         const token = await user.createToken()
-            // welcomemail(user.email, user.name)
+        welcomemail(user.email, user.name)
         res.status(201).send({ user, token })
 
     } catch (e) {
