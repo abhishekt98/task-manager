@@ -11,7 +11,7 @@ router.post('/users', async(req, res) => {
     try {
         await user.save()
         const token = await user.createToken()
-        welcomemail(user.email, user.name)
+            // welcomemail(user.email, user.name)
         res.status(201).send({ user, token })
 
     } catch (e) {
