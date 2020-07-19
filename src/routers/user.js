@@ -2,13 +2,16 @@ const express = require('express')
 const User = require('../model/User')
 const router = express.Router()
 const auth = require('../middleware/auth')
-
+const multer = require('multer')
+const sharo = require('sharp')
+const sharp = require('sharp')
+    // const { welcomemail } = require('../emails/account')
 router.post('/users', async(req, res) => {
     const user = new User(req.body)
     try {
         await user.save()
         const token = await user.createToken()
-
+            // welcomemail(user.email, user.name)
         res.status(201).send({ user, token })
 
     } catch (e) {
@@ -103,5 +106,48 @@ router.post('/users/logoutall', auth, async(req, res) => {
     }
 
 })
+const upload = multer({
+
+    limits: {
+        fileSize: 1000000
+    },
+    fileFilter(req, file, cb) {
+        if (!file.originalname.match(/\.(jpg|png|jpeg)$/)) {
+            cb(new Error('upload a image'))
+        }
+        cb(undefined, true)
+    }
+})
+
+router.post('/users/me/avatar', auth, upload.single('avatar'), async(req, res) => {
+    const buffer = await sharp(req.file.buffer).resize(100, 100).png().toBuffer()
+    req.user.avatar = buffer
+    await req.user.save();
+    res.send()
+}, (error, req, res, next) => {
+    res.status(400).send({ error: error.message })
+})
+
+router.delete('/users/me/avatar', auth, (req, res) => {
+    req.user.avatar = undefined
+    req.user.save()
+    res.send()
+})
+
+router.get('/users/:id/avatar', async(req, res) => {
+    try {
+
+        const user = await User.findById(req.params.id)
+        if (!user || !user.avatar) {
+            console.log('not found')
+            throw new Error('not found')
+        }
+        res.set('Content-Type', 'image/png')
+        res.send(user.avatar)
+    } catch (e) {
+        res.status(404).send()
+    }
+})
+
 
 module.exports = router
